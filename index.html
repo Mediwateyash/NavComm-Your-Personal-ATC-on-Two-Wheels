@@ -1,433 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>NavComm v3 — Advanced GUI (Diwate Yash)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>NavComm - ATC Bike Navigation</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-
   <style>
-    :root{
-      --accent: #00ffd4;   /* neon cyan */
-      --bg1: #051019;
-      --bg2: #0b2030;
-      --glass: rgba(4,10,14,0.66);
-      --muted: rgba(180,255,230,0.15);
-      --hud-w: 260px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color:var(--accent);
-      background: linear-gradient(180deg,var(--bg1),var(--bg2));
+    /* 🌌 General Theme */
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #07121f, #0c1a2b);
+      color: #00ffcc;
+      font-family: "Orbitron", monospace;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
 
-    /* Top control panel */
-    header#topbar{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      justify-content:space-between;
-      padding:12px 14px;
-      border-bottom:1px solid rgba(0,255,212,0.06);
-      background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(255,255,255,0.01));
+    /* 🧭 Header Panel */
+    #panel {
+      text-align: center;
+      padding: 20px;
+      background: rgba(0, 255, 204, 0.05);
+      border-bottom: 1px solid #00ffcc;
+      box-shadow: 0 0 10px #00bfa5;
     }
-    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap }
-    label{font-weight:700; font-size:13px; margin-right:6px; color:#bfffea}
-    input[type="text"]{
-      padding:8px 10px; border-radius:8px; background:transparent; border:1px solid var(--muted);
-      color:var(--accent); outline:none; width:160px;
+
+    label {
+      margin-right: 10px;
+      font-weight: bold;
     }
+
+    input {
+      margin: 5px;
+      padding: 8px 12px;
+      border: 1px solid #00ffcc;
+      border-radius: 8px;
+      background: #07121f;
+      color: #00ffcc;
+      outline: none;
+      font-family: monospace;
+    }
+
+    input:focus {
+      box-shadow: 0 0 8px #00ffcc;
+    }
+
     button {
-      padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700;
-      background:linear-gradient(90deg,var(--accent), #00bfa5); color:#032425;
-      box-shadow:0 6px 18px rgba(0,255,212,0.06);
-    }
-    button.ghost { background:transparent; border:1px solid var(--muted); color:var(--accent); box-shadow:none; }
-
-    /* Main layout */
-    main { display:flex; flex:1; position:relative; min-height:60vh; }
-    #map { flex:1; min-height:400px; }
-
-    /* HUD blocks: fixed positions around the map (Airplane HUD layout) */
-    .hud-block {
-      position:absolute;
-      width:var(--hud-w);
-      background:var(--glass);
-      border:1px solid rgba(0,255,212,0.06);
-      border-radius:12px;
-      padding:10px;
-      backdrop-filter: blur(6px);
-      box-shadow:0 10px 30px rgba(0,0,0,0.6);
-      z-index:999;
+      margin: 10px;
+      padding: 8px 15px;
+      background: #00ffcc;
+      color: #07121f;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 0 10px #00ffcc;
     }
 
-    /* top-left: callsign + mode */
-    #hud-top-left { left:14px; top:18px; }
-    /* top-right: speed + heading */
-    #hud-top-right { right:14px; top:18px; text-align:right; }
-    /* bottom-left: GPS + altitude */
-    #hud-bottom-left { left:14px; bottom:110px; }
-    /* bottom-right: radar + controls */
-    #hud-bottom-right { right:14px; bottom:110px; width:220px; padding:12px; }
-
-    .label { font-size:11px; color:#bfffe6; margin-bottom:6px; font-weight:700; letter-spacing:0.6px; }
-    .value { font-size:22px; font-weight:800; color:var(--accent); }
-    .small { font-size:13px; color:#caffee; }
-
-    .gps-bar { height:10px; background:rgba(255,255,255,0.03); border-radius:8px; overflow:hidden; margin-top:6px }
-    .gps-fill { height:100%; background:linear-gradient(90deg,var(--accent), #00bfa5); width:20%; }
-
-    /* radar */
-    #radarCanvas { width:100%; height:120px; display:block; border-radius:8px; background:rgba(0,0,0,0.06) }
-
-    /* bottom panel: log + footer */
-    #bottom {
-      display:flex; flex-direction:column; gap:0;
+    button:hover {
+      background: #00bfa5;
+      transform: scale(1.05);
+      box-shadow: 0 0 15px #00ffcc;
     }
+
+    /* 🗺️ Map */
+    #map {
+      flex: 1;
+      border-top: 1px solid #00ffcc;
+      border-bottom: 1px solid #00ffcc;
+      box-shadow: inset 0 0 10px #00ffcc;
+    }
+
+    /* 📟 Log Section */
     #log {
-      height:140px; overflow:auto; background:rgba(2,8,12,0.8); padding:12px; border-top:1px solid rgba(0,255,212,0.04);
-      font-family: "Courier New", monospace; font-size:13px; color:#bfffe6;
+      height: 150px;
+      overflow-y: auto;
+      background: rgba(7, 18, 31, 0.8);
+      padding: 10px;
+      border-top: 1px solid #00ffcc;
+      font-size: 14px;
+      font-family: "Courier New", monospace;
     }
-    #log p { margin:6px 0 }
 
+    #log p {
+      margin: 2px 0;
+      color: #7fffd4;
+    }
+
+    /* 👣 Footer */
     footer {
-      padding:10px 14px; display:flex; justify-content:space-between; align-items:center;
-      background:linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.03));
-      border-top:1px solid rgba(0,255,212,0.03);
-      font-size:13px; color:var(--accent);
+      text-align: center;
+      background: #05101b;
+      padding: 12px;
+      border-top: 1px solid #00ffcc;
+      font-size: 14px;
+      letter-spacing: 0.5px;
     }
-    footer a { color:var(--accent); text-decoration:none; font-weight:700; }
 
-    /* Control group inside bottom-right */
-    .hud-controls { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap }
-    .toggle { padding:7px 10px; border-radius:8px; background:transparent; color:var(--accent); border:1px solid rgba(255,255,255,0.04); cursor:pointer; font-weight:700 }
-    .toggle.active { background:linear-gradient(90deg,var(--accent), #00bfa5); color:#032425 }
-
-    /* Responsive: mobile rearrangement */
-    @media (max-width:900px){
-      :root { --hud-w: 220px }
-      .hud-block { width:200px; padding:8px }
-      #hud-top-left { left:10px; top:12px }
-      #hud-top-right { right:10px; top:12px }
-      #hud-bottom-left { left:10px; bottom:160px }
-      #hud-bottom-right { right:10px; bottom:160px; width:180px }
+    footer a {
+      color: #00ffcc;
+      text-decoration: none;
+      font-weight: bold;
     }
-    @media (max-width:600px){
-      header#topbar { flex-direction:column; gap:8px; align-items:flex-start; padding:10px }
-      .hud-block { width:48%; transform:translateY(0); }
-      #hud-top-left, #hud-top-right { position:relative; left:auto; right:auto; top:auto; margin:8px; width:calc(50% - 20px) }
-      #hud-bottom-left, #hud-bottom-right { position:relative; left:auto; right:auto; bottom:auto; margin:8px; width:calc(50% - 20px) }
-      #radarCanvas { height:100px }
-      #map { min-height:360px }
-      #log { height:120px }
+
+    footer a:hover {
+      text-decoration: underline;
+      color: #00bfa5;
     }
   </style>
 </head>
 <body>
-
-  <header id="topbar">
-    <div class="controls">
-      <label>Call Sign</label>
-      <input id="callsign" placeholder="EY3934" />
-      <label>Destination (lat,lon)</label>
-      <input id="dest" placeholder="19.076,72.8777" />
-      <button id="startBtn">🚀 Start Navigation</button>
-    </div>
-
-    <div class="controls">
-      <button id="btnSpeak" class="ghost">🎙️ Speak</button>
-      <button id="btnTheme" class="ghost">🌗 Theme</button>
-      <button id="btnMute" class="ghost">🔊 Mute</button>
-    </div>
-  </header>
-
-  <main>
-    <div id="map"></div>
-
-    <!-- HUD top-left -->
-    <div id="hud-top-left" class="hud-block">
-      <div class="label">CALL SIGN</div>
-      <div id="valCall" class="value">EY0000</div>
-      <div style="height:8px"></div>
-      <div class="label">MODE</div>
-      <div id="valMode" class="small">STANDBY</div>
-    </div>
-
-    <!-- HUD top-right -->
-    <div id="hud-top-right" class="hud-block">
-      <div class="label">SPEED</div>
-      <div id="valSpeed" class="value">0 km/h</div>
-      <div style="height:6px"></div>
-      <div class="label">HEADING</div>
-      <div id="valHeading" class="value">000°</div>
-    </div>
-
-    <!-- HUD bottom-left -->
-    <div id="hud-bottom-left" class="hud-block">
-      <div class="label">GPS SIGNAL</div>
-      <div class="gps-bar"><div id="gpsFill" class="gps-fill" style="width:10%"></div></div>
-      <div style="height:8px"></div>
-      <div class="label">ALTITUDE</div>
-      <div id="valAlt" class="value">— m</div>
-    </div>
-
-    <!-- HUD bottom-right (radar + toggles) -->
-    <div id="hud-bottom-right" class="hud-block">
-      <div class="label">RADAR</div>
-      <canvas id="radarCanvas" width="220" height="120"></canvas>
-      <div class="hud-controls">
-        <button id="btnRadar" class="toggle active">Radar</button>
-        <button id="btnToggleMute" class="toggle">Mute ATC</button>
-        <button id="btnPause" class="toggle">Pause</button>
-      </div>
-    </div>
-
-  </main>
-
-  <div id="bottom">
-    <div id="log"></div>
-    <footer>
-      <div>Designed &amp; Developed by <strong>Diwate Yash</strong></div>
-      <div><a href="https://www.linkedin.com/in/yash-diwate" target="_blank">LinkedIn</a> • © 2025 NavComm</div>
-    </footer>
+  <div id="panel">
+    <h2>🛞 NAVCOMM - Your Personal ATC on Two Wheels</h2>
+    <label>Call Sign:</label>
+    <input type="text" id="callsign" placeholder="e.g. EY3934">
+    <label>Destination (lat,lon):</label>
+    <input type="text" id="dest" placeholder="19.076,72.8777">
+    <button onclick="startATC()">🚀 Start Navigation</button>
+    <button onclick="startListening()">🎙️ Speak</button>
   </div>
 
-<script>
-/* ---------- NavComm v3 GUI logic ---------- */
+  <div id="map"></div>
+  <div id="log"></div>
 
-let map, tileNormal, tileDark, routeControl, userMarker;
-let callSign = "", destLat = 0, destLng = 0;
-let ready = false, muted = false, paused = false;
-let prevPos = null, prevTs = 0, radarOn = true;
-let lastInstruction = "";
-let chatterInterval = null;
-let preferredVoice = null;
+  <footer>
+    Designed & Developed by <strong>Diwate Yash</strong> |
+    <a href="https://www.linkedin.com/in/yash-diwate" target="_blank">LinkedIn</a> |
+    <span>© 2025 NavComm Systems</span>
+  </footer>
 
-/* --- voice setup: preload voices and pick a suitable one --- */
-function chooseVoice(){
-  const voices = speechSynthesis.getVoices();
-  // prefer a male-ish natural voice name if present
-  preferredVoice = voices.find(v => /Daniel|David|Alex|Joey|Google US English|Microsoft|Samantha/i.test(v.name)) || voices[0];
-}
-speechSynthesis.onvoiceschanged = chooseVoice;
-chooseVoice(); // try immediate
+  <script>
+    let map, routeControl, userMarker, callSign = "";
+    let userLat, userLng, readyForTakeoff = false;
+    let lastInstruction = "";
 
-function atcSpeak(msg, delay=0){
-  log("ATC: " + msg);
-  if(muted) return;
-  setTimeout(()=> {
-    const u = new SpeechSynthesisUtterance(msg);
-    if(preferredVoice) u.voice = preferredVoice;
-    u.rate = 0.95; u.pitch = 0.85;
-    speechSynthesis.speak(u);
-  }, delay);
-}
-
-/* small logger */
-function log(t){
-  const el = document.getElementById('log');
-  const p = document.createElement('p'); p.textContent = t;
-  el.appendChild(p); el.scrollTop = el.scrollHeight;
-}
-
-/* UI setters */
-function setCall(cs){ document.getElementById('valCall').textContent = cs || 'EY0000'; }
-function setMode(m){ document.getElementById('valMode').textContent = m; }
-function setSpeed(s){ document.getElementById('valSpeed').textContent = Math.round(s) + ' km/h'; }
-function setHeading(h){ document.getElementById('valHeading').textContent = String(Math.round(h)).padStart(3,'0') + '°'; }
-function setAlt(a){ document.getElementById('valAlt').textContent = a ? Math.round(a) + ' m' : '— m'; }
-function setGPSQuality(q){ const w = Math.max(0, Math.min(100, Math.round(q*100))); document.getElementById('gpsFill').style.width = w + '%'; }
-
-/* radar drawing (simple sweep) */
-const rCanvas = document.getElementById('radarCanvas'); const rCtx = rCanvas.getContext('2d'); let sweep = 0;
-function drawRadar(){
-  const w = rCanvas.width, h = rCanvas.height, cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 8;
-  rCtx.clearRect(0,0,w,h);
-  // grid rings
-  rCtx.strokeStyle = 'rgba(0,255,212,0.06)'; rCtx.lineWidth = 1;
-  for(let i=1;i<=3;i++){ rCtx.beginPath(); rCtx.arc(cx,cy,(r/3)*i,0,Math.PI*2); rCtx.stroke(); }
-  // sweep
-  const grad = rCtx.createRadialGradient(cx,cy,0,cx,cy,r);
-  grad.addColorStop(0,'rgba(0,255,212,0.18)'); grad.addColorStop(1,'rgba(0,255,212,0.00)');
-  rCtx.fillStyle = grad;
-  rCtx.beginPath(); rCtx.moveTo(cx,cy);
-  rCtx.arc(cx,cy,r, (sweep-10)*Math.PI/180, (sweep+10)*Math.PI/180); rCtx.closePath(); rCtx.fill();
-  // center
-  rCtx.fillStyle = 'rgba(0,255,212,0.95)'; rCtx.beginPath(); rCtx.arc(cx,cy,3,0,Math.PI*2); rCtx.fill();
-  sweep = (sweep + 3) % 360;
-  if(radarOn) requestAnimationFrame(drawRadar);
-}
-drawRadar();
-
-/* detection for speech support (hide speak on iOS Safari) */
-const supportsRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-let recognition = null;
-if(supportsRecognition){
-  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'en-US';
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.onresult = (ev) => {
-    const t = ev.results[0][0].transcript.toLowerCase(); log("YOU: " + t);
-    if(t.includes('ready')||t.includes('takeoff')||t.includes('yes')){ ready=true; setMode('ONLINE'); atcSpeak(`Mumbai Tower to ${callSign}, roger. Proceed straight and maintain speed 60 kilometers per hour.`); }
-    else if(t.includes('roger')||t.includes('copy')) atcSpeak(`Roger ${callSign}, continue current heading.`);
-    else if(t.includes('pause')) togglePause();
-    else atcSpeak(`Say again ${callSign}?`);
-  };
-  recognition.onerror = (e)=> log('Speech Error: ' + e.error);
-} else {
-  document.getElementById('btnSpeak').style.display = 'none';
-}
-
-/* setup event handlers */
-document.getElementById('startBtn').addEventListener('click', ()=> {
-  // ensure voices ready before speaking: pick after user gesture
-  chooseVoice();
-  startNavigation();
-});
-document.getElementById('btnSpeak').addEventListener('click', ()=> { if(recognition) recognition.start(); });
-document.getElementById('btnToggleMute').addEventListener('click', ()=> { muted = !muted; document.getElementById('btnToggleMute').classList.toggle('active', muted); log(muted ? 'ATC muted' : 'ATC unmuted'); });
-document.getElementById('btnRadar').addEventListener('click', ()=> { radarOn = !radarOn; document.getElementById('btnRadar').classList.toggle('active', radarOn); if(radarOn) requestAnimationFrame(drawRadar); });
-document.getElementById('btnPause').addEventListener('click', togglePause);
-document.getElementById('btnTheme').addEventListener('click', toggleTheme);
-document.getElementById('btnMute').addEventListener('click', ()=> { muted = !muted; log(muted ? 'Muted' : 'Unmuted'); });
-
-function togglePause(){ paused = !paused; document.getElementById('btnPause').classList.toggle('active', paused); setMode(paused ? 'PAUSED' : (ready ? 'ONLINE' : 'STANDBY')); log(paused ? 'Navigation paused' : 'Navigation resumed'); }
-function toggleTheme(){ document.body.classList.toggle('alt-theme'); log('Theme toggled'); }
-
-/* main nav start */
-function startNavigation(){
-  if(paused) { log('Unpause first'); return; }
-  callSign = (document.getElementById('callsign').value || '').trim().toUpperCase();
-  const destVal = (document.getElementById('dest').value || '').trim();
-  if(!callSign){ alert('Enter call sign'); return; }
-  if(!destVal || destVal.indexOf(',')<0){ alert('Enter destination as lat,lon'); return; }
-  const parts = destVal.split(','); destLat = parseFloat(parts[0]); destLng = parseFloat(parts[1]);
-  setCall(callSign); setMode('INITIALIZING');
-
-  // intro sequence (safe after user click)
-  atcSpeak('Hello pilot, welcome to NavComm — your personal ATC on two wheels.', 400);
-  atcSpeak('System designed and developed by Diwate Yash.', 3000);
-  atcSpeak('Initializing route guidance... Standby.', 6000);
-  atcSpeak('Navigation systems online.', 9000);
-  atcSpeak(`${callSign}, this is Mumbai Tower. You are cleared for takeoff. Are you ready for departure?`, 11500);
-
-  // initialize map after intro
-  setTimeout(()=> {
-    initMap(destLat, destLng);
-    setMode('STANDBY');
-    // autoplay first small acknowledgement after startup
-    setTimeout(()=> { ready = true; setMode('ONLINE'); atcSpeak(`Mumbai Tower to ${callSign}, roger. Proceed straight and maintain speed 60 kilometers per hour.`); }, 3500);
-    startChatter();
-  }, 12000);
-}
-
-/* initialize the leaflet map and geolocation */
-function initMap(dLat, dLng){
-  if(map) map.remove();
-  map = L.map('map',{zoomControl:true}).setView([dLat,dLng],13);
-  tileNormal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'});
-  tileDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap contributors'});
-  tileNormal.addTo(map);
-
-  navigator.geolocation.watchPosition(onGeoSuccess, (e)=>{ alert('Location error: ' + e.message); }, { enableHighAccuracy:true, maximumAge:1000, timeout:10000 });
-}
-
-/* handle geo updates */
-function onGeoSuccess(pos){
-  if(paused) return;
-  const lat = pos.coords.latitude, lon = pos.coords.longitude, alt = pos.coords.altitude;
-  setAlt(alt);
-  const accuracy = pos.coords.accuracy || 999; setGPSQuality(Math.max(0, 1 - (accuracy/100)));
-  const now = Date.now();
-
-  if(!userMarker){
-    userMarker = L.circleMarker([lat,lon], {radius:7, color: '#00ffd4', fillColor:'#00ffd4', fillOpacity:0.9}).addTo(map);
-    map.setView([lat,lon],15);
-    prevPos = {lat,lon,ts:now};
-    prevTs = now;
-  } else {
-    userMarker.setLatLng([lat,lon]);
-    // compute speed & heading
-    const dt = (now - prevPos.ts)/1000;
-    const dist = haversineDistance(prevPos.lat, prevPos.lon, lat, lon); // meters
-    const speedKmh = dt>0 ? (dist/dt)*3.6 : 0;
-    const hdg = bearing(prevPos.lat, prevPos.lon, lat, lon);
-    setSpeed(speedKmh); setHeading(hdg);
-    prevPos = {lat,lon,ts:now};
-  }
-
-  if(ready && !routeControl){
-    routeControl = L.Routing.control({
-      waypoints: [L.latLng(lat,lon), L.latLng(destLat,destLng)],
-      createMarker: () => null,
-      addWaypoints:false,
-      showAlternatives:true,
-      router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-      altLineOptions:{
-        styles: [ {color:'gray', opacity:0.5, weight:5}, {color:'#ffffff', opacity:0.8, weight:2} ]
-      }
-    }).addTo(map);
-    routeControl.on('routesfound', (e)=> { if(!paused) checkTurns(e.routes[0].coordinates); });
-  }
-
-  // arrival detection approximate
-  const distToDest = haversineDistance(lat,lon,destLat,destLng);
-  if(distToDest < 200 && !window._arrived){ window._arrived = true; atcSpeak(`${callSign}, destination in sight. You are cleared to park. Good ride, pilot.`); }
-}
-
-/* small helper math functions */
-function toRad(d){ return d*Math.PI/180; } function toDeg(r){ return r*180/Math.PI; }
-function haversineDistance(lat1,lon1,lat2,lon2){ const R=6371000; const dLat=toRad(lat2-lat1); const dLon=toRad(lon2-lon1); const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2); const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); return R*c; }
-function bearing(lat1,lon1,lat2,lon2){ const y=Math.sin(toRad(lon2-lon1))*Math.cos(toRad(lat2)); const x=Math.cos(toRad(lat1))*Math.sin(toRad(lat2))-Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*Math.cos(toRad(lon2-lon1)); return (toDeg(Math.atan2(y,x))+360)%360; }
-
-/* checkTurns on route coordinates (approx) */
-function checkTurns(coords){
-  if(paused) return;
-  let prevBearing = null;
-  for(let i=2;i<coords.length;i++){
-    const a=coords[i-2], b=coords[i-1], c=coords[i];
-    const bearPrev = bearing(a.lat,a.lng,b.lat,b.lng);
-    const bearNext = bearing(b.lat,b.lng,c.lat,c.lng);
-    const diff = Math.abs(((bearNext - bearPrev + 540) % 360) - 180);
-    if(diff > 25 && diff < 170 && lastInstruction !== 'turn'){
-      const dir = ((bearNext - bearPrev + 360) % 360) > 180 ? 'left' : 'right';
-      atcSpeak(`${callSign}, make a ${dir} turn ahead, maintain speed 60 kilometers per hour.`);
-      lastInstruction = 'turn'; setTimeout(()=>{ lastInstruction=''; },15000);
-      break;
+    function logMessage(text) {
+      const log = document.getElementById("log");
+      log.innerHTML += `<p>${text}</p>`;
+      log.scrollTop = log.scrollHeight;
     }
-  }
-}
 
-/* random periodic chatter to keep pilot engaged */
-const chatter = [
-  "Weather is clear with light winds from the east.",
-  "Visibility good, expect smooth ride ahead.",
-  "Some light traffic reported near your route, proceed with caution.",
-  "Maintain lane discipline, and keep an eye on surrounding vehicles.",
-  "System note: All sensors online, navigation stable.",
-  "Remember, safe riding is priority one.",
-  "You’re doing great pilot, maintain your current heading.",
-  "Minor congestion reported ahead — maintain speed 40 kilometers per hour."
-];
-function startChatter(){
-  if(chatterInterval) clearInterval(chatterInterval);
-  chatterInterval = setInterval(()=>{ if(ready && !paused) atcSpeak(`${callSign}, ${chatter[Math.floor(Math.random()*chatter.length)]}`); }, 70000);
-}
+    function atcSpeak(message, delay = 0) {
+      setTimeout(() => {
+        const msg = new SpeechSynthesisUtterance(message);
+        msg.rate = 0.9;
+        msg.pitch = 0.8;
+        msg.voice = speechSynthesis.getVoices().find(v => v.name.includes("Daniel")) || speechSynthesis.getVoices()[0];
+        speechSynthesis.speak(msg);
+        logMessage("🎧 " + message);
+      }, delay);
+    }
 
-/* initial UI defaults */
-setCall('EY0000'); setMode('STANDBY'); setSpeed(0); setHeading(0); setAlt(null); setGPSQuality(0.12);
+    function startATC() {
+      callSign = document.getElementById("callsign").value.trim().toUpperCase();
+      if (!callSign) return alert("Enter your call sign!");
+      const dest = document.getElementById("dest").value.split(",");
+      if (dest.length !== 2) return alert("Enter destination as lat,lon");
+      const destLat = parseFloat(dest[0]), destLng = parseFloat(dest[1]);
 
-/* hide speak on unsupported browsers early */
-if(!supportsRecognition) document.getElementById('btnSpeak').style.display = 'none';
+      // 🎧 Cinematic Intro Sequence
+      atcSpeak("Hello pilot, welcome to NavComm — your personal ATC on two wheels.", 500);
+      atcSpeak("System designed and developed by Diwate Yash.", 4000);
+      atcSpeak("Initializing route guidance... Standby.", 6500);
+      atcSpeak("Navigation systems online.", 9500);
+      atcSpeak(`${callSign}, this is Mumbai Tower. You are cleared for takeoff. Are you ready for departure?`, 12500);
 
-</script>
+      setTimeout(() => {
+        map = L.map('map').setView([destLat, destLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+
+        navigator.geolocation.watchPosition(pos => {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+
+          if (!userMarker) {
+            userMarker = L.marker([userLat, userLng]).addTo(map).bindPopup("Your Position");
+            map.setView([userLat, userLng], 15);
+
+            // Continue automatically after intro
+            setTimeout(() => {
+              readyForTakeoff = true;
+              atcSpeak(`Mumbai Tower to ${callSign}, roger. Proceed straight and maintain speed 60 kilometers per hour.`);
+            }, 4000);
+          } else {
+            userMarker.setLatLng([userLat, userLng]);
+          }
+
+          if (!routeControl && readyForTakeoff) {
+            routeControl = L.Routing.control({
+              waypoints: [L.latLng(userLat, userLng), L.latLng(destLat, destLng)],
+              createMarker: () => null,
+              addWaypoints: false,
+              showAlternatives: true,
+              altLineOptions: {
+                styles: [
+                  { color: 'gray', opacity: 0.5, weight: 5 },
+                  { color: 'white', opacity: 0.8, weight: 2 },
+                ]
+              }
+            }).addTo(map);
+
+            routeControl.on('routesfound', function(e) {
+              const route = e.routes[0].coordinates;
+              checkTurns(route);
+            });
+          }
+        }, err => alert("Location access denied!"), { enableHighAccuracy: true });
+      }, 14000);
+
+      startListening();
+    }
+
+    function checkTurns(coords) {
+      let prevBearing = 0;
+      for (let i = 2; i < coords.length; i++) {
+        const dx = coords[i].lng - coords[i - 1].lng;
+        const dy = coords[i].lat - coords[i - 1].lat;
+        const bearing = Math.atan2(dy, dx) * 180 / Math.PI;
+        const diff = Math.abs(bearing - prevBearing);
+        if (diff > 30 && diff < 150 && lastInstruction !== "turn") {
+          const dir = (bearing - prevBearing > 0) ? "left" : "right";
+          atcSpeak(`${callSign}, make a ${dir} turn ahead, maintain speed 60 kilometers per hour.`);
+          lastInstruction = "turn";
+        }
+        prevBearing = bearing;
+      }
+      setTimeout(() => { lastInstruction = ""; }, 15000);
+    }
+
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      logMessage("🗣️ You: " + transcript);
+      if (transcript.includes("ready for takeoff") || transcript.includes("yes")) {
+        readyForTakeoff = true;
+        atcSpeak(`Mumbai Tower to ${callSign}, roger. Proceed straight and maintain speed 60 kilometers per hour.`);
+      } else if (transcript.includes("roger")) {
+        atcSpeak(`Roger ${callSign}, continue current heading.`);
+      } else if (transcript.includes("request")) {
+        atcSpeak(`Request acknowledged ${callSign}, standby.`);
+      } else {
+        atcSpeak(`Say again ${callSign}?`);
+      }
+    };
+
+    function startListening() {
+      try {
+        recognition.start();
+        logMessage("🎙️ Listening for your response...");
+      } catch (e) {
+        console.log("Speech recognition not supported or already running.");
+      }
+    }
+  </script>
 </body>
 </html>
