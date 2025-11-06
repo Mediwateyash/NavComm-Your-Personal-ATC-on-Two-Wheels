@@ -143,9 +143,35 @@
       log.scrollTop = log.scrollHeight;
     }
 
+    // Function to convert numbers to aviation-style pronunciation
+    function convertNumbersToAviationStyle(text) {
+      // Replace numbers with aviation-style pronunciation
+      return text.replace(/\d+/g, match => {
+        // Convert each digit to aviation pronunciation
+        const aviationNumbers = {
+          '0': 'zero',
+          '1': 'one',
+          '2': 'two',
+          '3': 'three',
+          '4': 'four',
+          '5': 'five',
+          '6': 'six',
+          '7': 'seven',
+          '8': 'eight',
+          '9': 'niner'
+        };
+        
+        // Convert each digit individually
+        return match.split('').map(digit => aviationNumbers[digit] || digit).join(' ');
+      });
+    }
+
     function atcSpeak(message, delay = 0) {
       setTimeout(() => {
-        const msg = new SpeechSynthesisUtterance(message);
+        // Convert numbers in the message to aviation style
+        const aviationMessage = convertNumbersToAviationStyle(message);
+        
+        const msg = new SpeechSynthesisUtterance(aviationMessage);
         msg.rate = 0.9;
         msg.pitch = 0.8;
         msg.voice = speechSynthesis.getVoices().find(v => v.name.includes("Daniel")) || speechSynthesis.getVoices()[0];
@@ -185,7 +211,7 @@
             // Continue automatically after intro
             setTimeout(() => {
               readyForTakeoff = true;
-              atcSpeak(`Mumbai Tower to ${callSign}, roger. Proceed straight and maintain speed 60 kilometers per hour.`);
+              atcSpeak(`${callSign}, roger. Proceed straight and maintain speed 60 kilometers per hour.`);
             }, 4000);
           } else {
             userMarker.setLatLng([userLat, userLng]);
